@@ -18,6 +18,7 @@ class Wheel extends Equatable {
     this.textStyleTitleSpinButton,
     this.arrowView,
     this.colorIndicator,
+    this.arrowPosition = const Alignment(1.08, 0),
   })  : assert(items.length >= 2),
         assert(rotationCount >= 0);
 
@@ -58,6 +59,9 @@ class Wheel extends Equatable {
   ///UI arrow
   final Widget? arrowView;
 
+  /// Arrow Position
+  final Alignment arrowPosition;
+
   ///Color arrow
   final Color? colorIndicator;
 
@@ -85,8 +89,7 @@ class Wheel extends Equatable {
       action: action ?? this.action,
       spinButtonStyle: spinButtonStyle ?? this.spinButtonStyle,
       titleSpinButton: titleSpinButton ?? this.titleSpinButton,
-      textStyleTitleSpinButton:
-          textStyleTitleSpinButton ?? this.textStyleTitleSpinButton,
+      textStyleTitleSpinButton: textStyleTitleSpinButton ?? this.textStyleTitleSpinButton,
       arrowView: arrowView ?? this.arrowView,
       colorIndicator: colorIndicator ?? this.colorIndicator,
     );

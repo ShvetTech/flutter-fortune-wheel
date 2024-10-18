@@ -1,9 +1,11 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_fortune_wheel/src/helpers/helpers.dart';
 import 'package:flutter_fortune_wheel/src/models/models.dart';
 import 'package:flutter_fortune_wheel/src/views/arrow_view.dart';
 import 'package:flutter_fortune_wheel/src/views/board_view.dart';
+
 import '../core/core.dart';
 
 class FortuneWheel extends StatefulWidget {
@@ -14,6 +16,8 @@ class FortuneWheel extends StatefulWidget {
     required this.onResult,
     this.onAnimationStart,
     this.onAnimationEnd,
+    this.canStartAnimation = true,
+    this.shouldShowCenterButton = true,
   }) : super(key: key);
 
   ///Configure wheel
@@ -31,12 +35,17 @@ class FortuneWheel extends StatefulWidget {
   ///Handling when spinning ends
   final VoidCallback? onAnimationEnd;
 
+  /// Handling can wheel animate
+  final bool canStartAnimation;
+
+  /// Handling Center Spin Button Visibility
+  final bool shouldShowCenterButton;
+
   @override
   _FortuneWheelState createState() => _FortuneWheelState();
 }
 
-class _FortuneWheelState extends State<FortuneWheel>
-    with SingleTickerProviderStateMixin {
+class _FortuneWheelState extends State<FortuneWheel> with SingleTickerProviderStateMixin {
   late AnimationController _wheelAnimationController;
   late Animation _wheelAnimation;
 
@@ -57,14 +66,12 @@ class _FortuneWheelState extends State<FortuneWheel>
   ///List of wheel elements prioritized for winning spins
   late List<Fortune> _fortuneValuesByPriority;
 
-  double get wheelSize =>
-      widget.wheel.size ?? MediaQuery.of(context).size.shortestSide * 0.8;
+  double get wheelSize => widget.wheel.size ?? MediaQuery.of(context).size.shortestSide * 0.8;
 
   @override
   void initState() {
     super.initState();
-    _wheelAnimationController =
-        AnimationController(vsync: this, duration: widget.wheel.duration);
+    _wheelAnimationController = AnimationController(vsync: this, duration: widget.wheel.duration);
     _wheelAnimation = CurvedAnimation(
       parent: _wheelAnimationController,
       curve: Curves.fastLinearToSlowEaseIn,
@@ -85,9 +92,11 @@ class _FortuneWheelState extends State<FortuneWheel>
     final panFactor = 6 / meanSize;
     return PanAwareBuilder(
       physics: CircularPanPhysics(),
-      onFling: widget.wheel.isSpinByPriority
-          ? _handleSpinByPriorityPressed
-          : _handleSpinByRandomPressed,
+      onFling: widget.canStartAnimation
+          ? widget.wheel.isSpinByPriority
+              ? _handleSpinByPriorityPressed
+              : _handleSpinByRandomPressed
+          : null,
       builder: (BuildContext context, PanState panState) {
         final panAngle = panState.distance * panFactor;
         return Stack(
@@ -106,8 +115,7 @@ class _FortuneWheelState extends State<FortuneWheel>
                   _indexResult = _getIndexFortune(angle + _currentAngle);
                   widget.onChanged.call(widget.wheel.items[_indexResult]);
                 }
-                final rotationAngle =
-                    2 * pi * widget.wheel.rotationCount * _wheelAnimation.value;
+                final rotationAngle = 2 * pi * widget.wheel.rotationCount * _wheelAnimation.value;
 
                 ///Current angle position of the standing wheel
                 final current = _currentAngle + rotationAngle + panAngle;
@@ -128,7 +136,7 @@ class _FortuneWheelState extends State<FortuneWheel>
               height: wheelSize,
               width: wheelSize,
               child: Align(
-                alignment: const Alignment(1.08, 0),
+                alignment: widget.wheel.arrowPosition,
                 child: widget.wheel.arrowView ?? const ArrowView(),
               ),
             ),
@@ -146,12 +154,14 @@ class _FortuneWheelState extends State<FortuneWheel>
   ///UI Button Spin
   Widget _buildButtonSpin() {
     return Visibility(
-      visible: !_wheelAnimationController.isAnimating,
+      visible: widget.shouldShowCenterButton && !_wheelAnimationController.isAnimating,
       child: widget.wheel.action ??
           TextButton(
-            onPressed: widget.wheel.isSpinByPriority
-                ? _handleSpinByPriorityPressed
-                : _handleSpinByRandomPressed,
+            onPressed: widget.canStartAnimation
+                ? widget.wheel.isSpinByPriority
+                    ? _handleSpinByPriorityPressed
+                    : _handleSpinByRandomPressed
+                : null,
             style: widget.wheel.spinButtonStyle ??
                 TextButton.styleFrom(
                   backgroundColor: Colors.black.withOpacity(0.4),
@@ -172,8 +182,7 @@ class _FortuneWheelState extends State<FortuneWheel>
       double randomDouble = Random().nextDouble();
       //random theo số phần tử
       int randomLength = Random().nextInt(widget.wheel.items.length);
-      _angle =
-          (randomDouble + widget.wheel.rotationCount + randomLength) * 2 * pi;
+      _angle = (randomDouble + widget.wheel.rotationCount + randomLength) * 2 * pi;
       await Future.microtask(() => widget.onAnimationStart?.call());
       await _wheelAnimationController.forward(from: 0.0).then((_) {
         double factor = _currentAngle / (2 * pi);
@@ -209,13 +218,11 @@ class _FortuneWheelState extends State<FortuneWheel>
       int itemCount = widget.wheel.items.length;
 
       //Number of items to reach the result by index
-      int angleFactor = _currentIndex > _indexResult
-          ? _currentIndex - _indexResult
-          : itemCount - (_indexResult - _currentIndex);
+      int angleFactor =
+          _currentIndex > _indexResult ? _currentIndex - _indexResult : itemCount - (_indexResult - _currentIndex);
 
       //Calculate the rotation angle to the winning spin value
-      _angle = (2 * pi / itemCount) * angleFactor +
-          widget.wheel.rotationCount * 2 * pi;
+      _angle = (2 * pi / itemCount) * angleFactor + widget.wheel.rotationCount * 2 * pi;
       await Future.microtask(() => widget.onAnimationStart?.call());
       await _wheelAnimationController.forward(from: 0.0).then((_) {
         double factor = _currentAngle / (2 * pi);
